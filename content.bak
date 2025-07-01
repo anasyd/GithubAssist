@@ -1,0 +1,51 @@
+updateFileNavigationIcons() {
+    console.log('Updating file navigation icons...');
+    
+    // Update the current file in the sidebar to show resolved status
+    const currentFile = document.querySelector('.js-conflicted-file.selected');
+    if (currentFile) {
+      const filename = currentFile.getAttribute('data-filename');
+      console.log(`Updating status for file: ${filename}`);
+      
+      // Add the green checkmark if it doesn't exist
+      let statusIcon = currentFile.querySelector('.discussion-item-icon');
+      if (!statusIcon) {
+        statusIcon = document.createElement('div');
+        statusIcon.className = 'discussion-item-icon color-bg-success-emphasis float-right mt-1';
+        statusIcon.innerHTML = `
+          <svg aria-hidden="true" height="16" viewBox="0 0 16 16" version="1.1" width="16" data-view-component="true" class="octicon octicon-check mr-0 color-fg-on-emphasis">
+            <path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z"></path>
+          </svg>
+        `;
+        
+        const contentDiv = currentFile.querySelector('.overflow-hidden');
+        if (contentDiv) {
+          contentDiv.appendChild(statusIcon);
+        }
+      } else {
+        // Update existing icon to show success
+        statusIcon.className = 'discussion-item-icon color-bg-success-emphasis float-right mt-1';
+      }
+      
+      console.log('Updated file navigation icon');
+    }
+  }
+
+  refreshGitHubInterface() {
+    console.log('Attempting to refresh GitHub interface...');
+    
+    // Just do gentle UI updates without aggressive refreshing
+    this.updateAllGitHubUI();
+    this.updateFileNavigationIcons();
+    
+    // Remove and re-add our buttons to force a visual refresh
+    setTimeout(() => {
+      const existingButtons = document.querySelectorAll('.merge-helper-conflict-btn, .merge-helper-textarea-btn');
+      existingButtons.forEach(btn => btn.remove());
+      
+      // Re-add buttons
+      setTimeout(() => {
+        this.processConflictMarkers();
+      }, 100);
+    }, 100);
+  }// GitHub Merge Conflict Helper Content Script

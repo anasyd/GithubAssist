@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "GitHub Merge Conflict Helper",
+  "version": "1.0.0",
+  "description": "Simplify GitHub merge conflict resolution with one-click buttons",
+  "permissions": ["activeTab"],
+  "content_scripts": [
+    {
+      "matches": ["https://github.com/*"],
+      "js": ["content.js"],
+      "css": ["styles.css"]
+    }
+  ],
+
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "GitHub Merge Conflict Helper"
+  }
+}

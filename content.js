@@ -2,9 +2,31 @@
 // Only updates content without interfering with CodeMirror's internal state
 class MergeConflictHelper {
   constructor() {
-    this.debugMode = true;
+    // Set debug mode based on extension manifest version or development detection
+    this.debugMode = this.isDevelopmentMode();
     this.init();
     this.setupMessageListener();
+  }
+  isDevelopmentMode() {
+    // Simple debug control - change this for development vs production
+    // For development: set to true
+    // For production: set to false
+    const DEBUG_MODE = true; // ← Change this to false for production releases
+
+    try {
+      // You can also check version patterns if needed
+      if (chrome.runtime && chrome.runtime.getManifest) {
+        const manifest = chrome.runtime.getManifest();
+
+        // Uncomment the line below and comment out DEBUG_MODE
+        // return manifest.version.endsWith('.0'); // Debug for .0 versions, production for .1+ versions
+      }
+
+      return DEBUG_MODE;
+    } catch (error) {
+      // If we can't determine, default to false for safety
+      return false;
+    }
   }
 
   debug(message, data = null) {
@@ -14,7 +36,7 @@ class MergeConflictHelper {
   }
 
   setupMessageListener() {
-    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    this.messageListener = (request, sender, sendResponse) => {
       if (request.action === "checkConflicts") {
         const hasConflicts = this.hasConflicts();
         const conflictCount = this.getConflictCount();
@@ -23,17 +45,23 @@ class MergeConflictHelper {
           conflictCount: conflictCount,
         });
       }
-    });
+    };
+    chrome.runtime.onMessage.addListener(this.messageListener);
   }
 
   async init() {
     this.debug("Initializing...");
     await this.waitForPageLoad();
+    this.setupDOMObserver();
+    this.startPeriodicCheck();
 
     if (this.isConflictPage()) {
       this.debug("Conflict page detected, setting up helper...");
-      await this.waitForElements();
-      this.setupHelper();
+      const elementsFound = await this.waitForElements();
+      this.debug("Elements found:", elementsFound);
+      await this.setupHelper();
+    } else {
+      this.debug("Not a conflict page, skipping setup");
     }
   }
 
@@ -60,33 +88,151 @@ class MergeConflictHelper {
     let attempts = 0;
 
     while (attempts < maxAttempts) {
-      const hasCodeMirror = document.querySelector(".CodeMirror") !== null;
-      const hasTextarea =
-        document.querySelector(".file-editor-textarea") !== null;
+      const selectors = [
+        ".CodeMirror",
+        ".file-editor-textarea",
+        "textarea[data-testid='file-editor-textarea']",
+        ".merge-editor",
+        "[data-testid='merge-editor']",
+        ".js-file-line-container",
+        ".blob-wrapper",
+        ".js-code-editor",
+        "textarea",
+      ];
 
-      if (hasCodeMirror || hasTextarea) {
-        this.debug("Found conflict editor elements");
-        return;
+      let foundElement = null;
+      for (const selector of selectors) {
+        const element = document.querySelector(selector);
+        if (element) {
+          foundElement = selector;
+          break;
+        }
+      }
+
+      this.debug(`Attempt ${attempts + 1}: Looking for elements...`, {
+        found: foundElement,
+        availableTextareas: document.querySelectorAll("textarea").length,
+        availableCodeMirror: document.querySelectorAll(".CodeMirror").length,
+      });
+
+      if (foundElement) {
+        this.debug("Found conflict editor elements:", foundElement);
+        return true;
       }
 
       attempts++;
       await new Promise((resolve) => setTimeout(resolve, 200));
     }
+
+    this.debug("Timeout waiting for elements, proceeding anyway...");
+    return false;
+  }
+
+  async waitForContent() {
+    this.debug("Waiting for conflict content to load...");
+    const maxAttempts = 10;
+    let attempts = 0;
+
+    while (attempts < maxAttempts) {
+      const content = this.getContent();
+      this.debug(
+        `Content check attempt ${attempts + 1}: ${content.length} characters`,
+        {
+          hasConflictMarkers: content.includes("<<<<<<<"),
+          contentPreview: content.substring(0, 100),
+        }
+      );
+
+      if (content && content.length > 0) {
+        this.debug("Content found, updating status...");
+        return true;
+      }
+
+      attempts++;
+      await new Promise((resolve) => setTimeout(resolve, 300));
+    }
+
+    this.debug("Timeout waiting for content");
+    return false;
   }
 
   isConflictPage() {
-    return (
-      window.location.href.includes("/conflicts") ||
+    // Check URL patterns
+    const url = window.location.href;
+    const hasConflictURL =
+      url.includes("/conflicts") ||
+      url.includes("/edit/") ||
+      url.includes("/merge") ||
+      url.match(/\/pull\/\d+\/files/);
+
+    // Check for conflict-related elements
+    const hasConflictElements =
       document.querySelector(".file-editor-textarea") !== null ||
-      document.title.includes("conflict")
-    );
+      document.querySelector(".CodeMirror") !== null ||
+      document.querySelector("[data-testid='merge-editor']") !== null;
+
+    // Check page title
+    const hasConflictTitle =
+      document.title.includes("conflict") ||
+      document.title.includes("merge") ||
+      document.title.includes("edit");
+
+    // Check for conflict markers in any text content
+    const pageText = document.body.textContent || "";
+    const hasConflictMarkers =
+      pageText.includes("<<<<<<<") ||
+      pageText.includes(">>>>>>>") ||
+      pageText.includes("=======");
+
+    const isConflict =
+      hasConflictURL ||
+      hasConflictElements ||
+      hasConflictTitle ||
+      hasConflictMarkers;
+
+    this.debug("Conflict page detection:", {
+      url: hasConflictURL,
+      elements: hasConflictElements,
+      title: hasConflictTitle,
+      markers: hasConflictMarkers,
+      result: isConflict,
+    });
+
+    return isConflict;
   }
 
-  setupHelper() {
+  isConflictPageQuiet() {
+    const url = window.location.href;
+    const hasConflictURL =
+      url.includes("/conflicts") ||
+      url.includes("/edit/") ||
+      url.includes("/merge") ||
+      url.match(/\/pull\/\d+\/files/);
+
+    const hasConflictElements =
+      document.querySelector(
+        ".file-editor-textarea, .CodeMirror, [data-testid='merge-editor']"
+      ) !== null;
+
+    return hasConflictURL || hasConflictElements;
+  }
+
+  async setupHelper() {
     this.debug("Setting up helper...");
     this.detectBranches();
     this.addButtons();
-    this.updateConflictStatus();
+    this.setupContentObserver();
+
+    // Wait for content to load before checking conflicts
+    const contentLoaded = await this.waitForContent();
+    if (contentLoaded) {
+      this.updateConflictStatus();
+    } else {
+      // Fallback: try again after longer delay
+      setTimeout(() => {
+        this.updateConflictStatus();
+      }, 2000);
+    }
   }
 
   detectBranches() {
@@ -208,20 +354,38 @@ class MergeConflictHelper {
     this.debug("Adding buttons...");
 
     const existing = document.querySelector(".merge-helper-buttons");
-    if (existing) existing.remove();
+    if (existing) {
+      this.debug("Buttons already exist, removing old ones");
+      existing.remove();
+    }
 
-    const insertionTargets = [".file-header", ".Box-header", "main"];
+    // Expanded list of possible insertion targets
+    const insertionTargets = [
+      ".file-header",
+      ".Box-header",
+      ".file-navigation",
+      ".js-file-header",
+      ".repository-content",
+      ".application-main",
+      "main",
+      "body",
+    ];
+
     let insertionPoint = null;
 
     for (const selector of insertionTargets) {
       const element = document.querySelector(selector);
       if (element) {
         insertionPoint = element;
+        this.debug("Found insertion point:", selector);
         break;
       }
     }
 
-    if (!insertionPoint) return;
+    if (!insertionPoint) {
+      this.debug("No insertion point found, cannot add buttons");
+      return;
+    }
 
     const buttonContainer = document.createElement("div");
     buttonContainer.className = "merge-helper-buttons";
@@ -235,6 +399,8 @@ class MergeConflictHelper {
             flex-direction: column;
             gap: 12px;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            position: relative;
+            z-index: 1000;
         `;
 
     const currentDisplay = this.formatBranchName(this.currentBranch);
@@ -277,14 +443,24 @@ class MergeConflictHelper {
             </div>
         `;
 
-    insertionPoint.insertAdjacentElement(
-      insertionPoint.classList.contains("file-header")
-        ? "afterend"
-        : "afterbegin",
-      buttonContainer
-    );
+    // Try different insertion strategies
+    try {
+      if (insertionPoint.classList.contains("file-header")) {
+        insertionPoint.insertAdjacentElement("afterend", buttonContainer);
+      } else if (
+        insertionPoint.tagName === "MAIN" ||
+        insertionPoint.classList.contains("application-main")
+      ) {
+        insertionPoint.insertAdjacentElement("afterbegin", buttonContainer);
+      } else {
+        insertionPoint.insertAdjacentElement("afterbegin", buttonContainer);
+      }
 
-    this.attachEventListeners(buttonContainer);
+      this.debug("Buttons added successfully");
+      this.attachEventListeners(buttonContainer);
+    } catch (error) {
+      this.debug("Error adding buttons:", error);
+    }
   }
 
   attachEventListeners(container) {
@@ -592,15 +768,33 @@ class MergeConflictHelper {
   getContent() {
     // Try to get content safely without breaking CodeMirror
     const textarea = document.querySelector(".file-editor-textarea");
-    if (textarea) {
+    if (textarea && textarea.value) {
       return textarea.value;
     }
 
-    // Fallback: try other textareas
+    // Try CodeMirror content
+    const codeMirror = document.querySelector(".CodeMirror");
+    if (codeMirror && codeMirror.CodeMirror) {
+      const content = codeMirror.CodeMirror.getValue();
+      if (content) {
+        return content;
+      }
+    }
+
+    // Fallback: try other textareas that have content
     const allTextareas = document.querySelectorAll("textarea");
     for (const ta of allTextareas) {
-      if (ta.value && ta.value.includes("<<<<<<<")) {
+      if (ta.value && ta.value.trim()) {
         return ta.value;
+      }
+    }
+
+    // Last resort: try to find content in the DOM
+    const blobWrapper = document.querySelector(".blob-wrapper");
+    if (blobWrapper) {
+      const textContent = blobWrapper.textContent || "";
+      if (textContent.includes("<<<<<<<")) {
+        return textContent;
       }
     }
 
@@ -660,18 +854,274 @@ class MergeConflictHelper {
       }
     }
   }
+  cleanup() {
+    this.debug("Cleaning up merge conflict helper...");
+
+    // Stop periodic check
+    this.stopPeriodicCheck();
+
+    // Remove DOM observer
+    if (this.observer) {
+      this.observer.disconnect();
+      this.observer = null;
+    }
+
+    // Remove content observer
+    if (this.contentObserver) {
+      this.contentObserver.disconnect();
+      this.contentObserver = null;
+    }
+
+    // Remove any elements we added
+    const elementsToRemove = [
+      ".merge-helper-buttons",
+      ".merge-helper-status",
+      ".merge-helper-copy-success",
+      ".merge-helper-resolved-content",
+    ];
+
+    elementsToRemove.forEach((selector) => {
+      const elements = document.querySelectorAll(selector);
+      elements.forEach((el) => el.remove());
+    });
+
+    // Clear any stored data
+    this.resolvedContent = null;
+
+    // Remove message listener
+    if (this.messageListener && chrome.runtime.onMessage.hasListener) {
+      chrome.runtime.onMessage.removeListener(this.messageListener);
+    }
+  }
+
+  startPeriodicCheck() {
+    // Fallback: periodically check if we're on a conflict page without buttons
+    this.periodicCheck = setInterval(async () => {
+      // Only check if we don't already have buttons
+      if (!document.querySelector(".merge-helper-buttons")) {
+        // Use a lighter check to avoid excessive logging
+        const url = window.location.href;
+        const hasConflictURL =
+          url.includes("/conflicts") ||
+          url.includes("/edit/") ||
+          url.includes("/merge");
+
+        if (
+          hasConflictURL ||
+          document.querySelector(".file-editor-textarea, .CodeMirror")
+        ) {
+          this.debug(
+            "Periodic check: conflict page without buttons, setting up..."
+          );
+          await this.setupHelper();
+        }
+      }
+    }, 3000); // Reduced frequency to every 3 seconds
+  }
+
+  stopPeriodicCheck() {
+    if (this.periodicCheck) {
+      clearInterval(this.periodicCheck);
+      this.periodicCheck = null;
+    }
+  }
+
+  setupDOMObserver() {
+    // Watch for DOM changes that might indicate a page change
+    this.observer = new MutationObserver((mutations) => {
+      let shouldReinit = false;
+
+      mutations.forEach((mutation) => {
+        // Check if the main content area changed
+        if (
+          mutation.target.matches?.(
+            ".application-main, #js-repo-pjax-container, .js-repo-pjax-container, .repository-content"
+          )
+        ) {
+          shouldReinit = true;
+        }
+
+        // Check if added nodes include important content
+        mutation.addedNodes.forEach((node) => {
+          if (node.nodeType === 1) {
+            if (
+              node.matches?.(
+                ".application-main, .file-editor-textarea, .CodeMirror, textarea, .merge-editor"
+              )
+            ) {
+              shouldReinit = true;
+            }
+            // Also check if any child nodes contain these elements
+            if (
+              node.querySelector?.(
+                ".file-editor-textarea, .CodeMirror, textarea, .merge-editor"
+              )
+            ) {
+              shouldReinit = true;
+            }
+          }
+        });
+      });
+
+      if (shouldReinit) {
+        this.debug(
+          "DOM change detected, checking if we should reinitialize..."
+        );
+
+        // Small delay to let DOM settle
+        setTimeout(async () => {
+          if (
+            this.isConflictPageQuiet() &&
+            !document.querySelector(".merge-helper-buttons")
+          ) {
+            this.debug("Reinitializing helper due to DOM changes...");
+            await this.setupHelper();
+          }
+        }, 100);
+      }
+    });
+
+    // Start observing with more comprehensive options
+    this.observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: false, // Don't watch attribute changes to reduce noise
+      attributeOldValue: false,
+      characterData: false,
+      characterDataOldValue: false,
+    });
+  }
+
+  setupContentObserver() {
+    // Watch for changes to textareas that might indicate content loading
+    this.contentObserver = new MutationObserver((mutations) => {
+      let shouldUpdateStatus = false;
+
+      mutations.forEach((mutation) => {
+        if (mutation.target.matches?.("textarea, .CodeMirror")) {
+          shouldUpdateStatus = true;
+        }
+
+        // Check if any added nodes are textareas or contain textareas
+        mutation.addedNodes.forEach((node) => {
+          if (node.nodeType === 1) {
+            if (node.matches?.("textarea, .CodeMirror")) {
+              shouldUpdateStatus = true;
+            }
+            if (node.querySelector?.("textarea, .CodeMirror")) {
+              shouldUpdateStatus = true;
+            }
+          }
+        });
+      });
+
+      if (
+        shouldUpdateStatus &&
+        document.querySelector(".merge-helper-buttons")
+      ) {
+        // Only update if we already have buttons (avoid unnecessary checks)
+        this.debug("Content change detected, updating status...");
+        setTimeout(() => {
+          this.updateConflictStatus();
+        }, 200);
+      }
+    });
+
+    // Start observing
+    this.contentObserver.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["value"],
+    });
+  }
+}
+
+// Navigation detection for GitHub's PJAX
+let currentHelper = null;
+let currentURL = window.location.href;
+
+function initializeHelper() {
+  try {
+    // Clean up previous instance if it exists
+    if (currentHelper) {
+      currentHelper.cleanup?.();
+    }
+
+    currentHelper = new MergeConflictHelper();
+    currentURL = window.location.href;
+  } catch (error) {
+    console.error("[Merge Helper] Initialization error:", error);
+  }
+}
+
+// Detect URL changes (GitHub PJAX navigation)
+function setupNavigationDetection() {
+  // Override pushState and replaceState to detect navigation
+  const originalPushState = history.pushState;
+  const originalReplaceState = history.replaceState;
+
+  history.pushState = function (...args) {
+    originalPushState.apply(history, args);
+    setTimeout(checkForNavigation, 100);
+  };
+
+  history.replaceState = function (...args) {
+    originalReplaceState.apply(history, args);
+    setTimeout(checkForNavigation, 100);
+  };
+
+  // Listen for popstate (back/forward button)
+  window.addEventListener("popstate", () => {
+    setTimeout(checkForNavigation, 100);
+  });
+
+  // Also listen for GitHub's pjax events
+  document.addEventListener("pjax:success", () => {
+    setTimeout(checkForNavigation, 100);
+  });
+
+  document.addEventListener("pjax:end", () => {
+    setTimeout(checkForNavigation, 100);
+  });
+}
+
+function checkForNavigation() {
+  if (window.location.href !== currentURL) {
+    console.log("[Merge Helper] Navigation detected, reinitializing...");
+
+    // Try multiple times with increasing delays to handle GitHub's async loading
+    setTimeout(() => initializeHelper(), 200);
+    setTimeout(() => {
+      if (
+        currentHelper &&
+        currentHelper.isConflictPage() &&
+        !document.querySelector(".merge-helper-buttons")
+      ) {
+        console.log("[Merge Helper] Retrying initialization (1s)...");
+        initializeHelper();
+      }
+    }, 1000);
+    setTimeout(() => {
+      if (
+        currentHelper &&
+        currentHelper.isConflictPage() &&
+        !document.querySelector(".merge-helper-buttons")
+      ) {
+        console.log("[Merge Helper] Retrying initialization (3s)...");
+        initializeHelper();
+      }
+    }, 3000);
+  }
 }
 
 // Initialize
-try {
-  if (document.readyState === "loading") {
-    document.addEventListener(
-      "DOMContentLoaded",
-      () => new MergeConflictHelper()
-    );
-  } else {
-    new MergeConflictHelper();
-  }
-} catch (error) {
-  console.error("[Merge Helper] Initialization error:", error);
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", () => {
+    setupNavigationDetection();
+    initializeHelper();
+  });
+} else {
+  setupNavigationDetection();
+  initializeHelper();
 }

@@ -1,0 +1,8 @@
+.git\
+builds\
+.github\
+*.md
+LICENSE
+build.sh
+build.bat
+build-exclude.txt

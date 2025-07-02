@@ -252,36 +252,26 @@ class MergeConflictHelper {
             <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
                 <button class="btn btn-sm merge-helper-current" style="
                     background: #238636; color: white; border: none; 
-                    padding: 4px 8px; border-radius: 4px; font-weight: 500; cursor: pointer;
-                    position: relative; height: 50px; display: flex; flex-direction: column; justify-content: center;
-                    font-size: 12px;
-                ">
-                    <div>Accept All Current</div>
-                    <div style="
-                        font-size: 9px; opacity: 0.8; font-weight: normal; margin-top: 1px;
-                    ">${currentDisplay}</div>
-                </button>
+                    padding: 6px 12px; border-radius: 4px; font-weight: 500; cursor: pointer;
+                    font-size: 12px; white-space: nowrap;
+                ">Accept All Current ${
+                  currentDisplay ? `(${currentDisplay})` : ""
+                }</button>
                 <button class="btn btn-sm merge-helper-incoming" style="
                     background: #1f6feb; color: white; border: none; 
-                    padding: 4px 8px; border-radius: 4px; font-weight: 500; cursor: pointer;
-                    position: relative; height: 50px; display: flex; flex-direction: column; justify-content: center;
-                    font-size: 12px;
-                ">
-                    <div>Accept All Incoming</div>
-                    <div style="
-                        font-size: 9px; opacity: 0.8; font-weight: normal; margin-top: 1px;
-                    ">${incomingDisplay}</div>
-                </button>
+                    padding: 6px 12px; border-radius: 4px; font-weight: 500; cursor: pointer;
+                    font-size: 12px; white-space: nowrap;
+                ">Accept All Incoming ${
+                  incomingDisplay ? `(${incomingDisplay})` : ""
+                }</button>
                 <button class="btn btn-sm merge-helper-both" style="
                     background: #8957e5; color: white; border: none; 
-                    padding: 4px 8px; border-radius: 4px; font-weight: 500; cursor: pointer;
-                    height: 50px; display: flex; align-items: center; justify-content: center;
+                    padding: 6px 12px; border-radius: 4px; font-weight: 500; cursor: pointer;
                     font-size: 12px;
                 ">Keep Both</button>
                 <button class="btn btn-sm merge-helper-show" style="
                     background: #f0883e; color: white; border: none; 
-                    padding: 4px 8px; border-radius: 4px; font-weight: 500; cursor: pointer;
-                    height: 50px; display: flex; align-items: center; justify-content: center;
+                    padding: 6px 12px; border-radius: 4px; font-weight: 500; cursor: pointer;
                     font-size: 12px;
                 ">Show Resolved</button>
             </div>

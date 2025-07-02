@@ -1,0 +1,16 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="128" height="128" rx="20" fill="#0366d6"/>
+  
+  <!-- Merge symbol -->
+  <path d="M 30 40 L 64 20 L 98 40 L 98 60 L 64 80 L 30 60 Z" fill="white" opacity="0.9"/>
+  
+  <!-- Conflict resolution symbol -->
+  <circle cx="64" cy="50" r="8" fill="#28a745"/>
+  <path d="M 60 50 L 63 53 L 68 46" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/>
+  
+  <!-- Tool indicator -->
+  <rect x="54" y="90" width="20" height="4" rx="2" fill="white" opacity="0.7"/>
+  <rect x="58" y="96" width="12" height="4" rx="2" fill="white" opacity="0.7"/>
+  <rect x="60" y="102" width="8" height="4" rx="2" fill="white" opacity="0.7"/>
+</svg>

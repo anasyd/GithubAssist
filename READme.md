@@ -1,122 +1,214 @@
 # GitHub Merge Conflict Helper
 
-A Chrome browser extension that simplifies resolving merge conflicts on GitHub by adding intuitive one-click buttons for conflict resolution.
+A Chrome browser extension that simplifies resolving merge conflicts on GitHub with one-click buttons and automatic clipboard copying.
+
+<div align="center">
+  <img src="images/icon.png" alt="Extension Icon" width="128" height="128">
+  
+  *One-click merge conflict resolution for GitHub*
+</div>
+
+![Extension Demo](images/Screenshot.png)
 
 ## Features
 
-- **Individual Conflict Resolution**: Add "Accept Current" and "Accept Incoming" buttons above each conflict section
-- **Bulk Operations**: "Accept All Current" and "Accept All Incoming" buttons at the top of the file
-- **Real-time Status**: Shows remaining conflict count and resolution status
-- **Branch Name Display**: Shows which branch each conflict section comes from
-- **Responsive Design**: Works on both desktop and mobile GitHub interfaces
+- 🚀 **One-click conflict resolution** - Accept current, incoming, or both changes instantly
+- 📋 **Automatic clipboard copying** - Resolved content is automatically copied, just paste!
+- 🏷️ **Branch name display** - Shows which branch is "current" and which is "incoming"
+- 🔒 **Safe operation** - Works with GitHub's existing editor without breaking functionality
+- 🎯 **Smart detection** - Automatically detects conflict markers and branch information
+- 💡 **Copy-paste workflow** - Simple and reliable approach that always works
 
 ## How It Works
 
-When you open a file with merge conflicts on GitHub, the extension automatically detects conflict markers and adds helpful buttons:
-
-### For Individual Conflicts
-```
-Accept Current (feat/initial-expo-migration) | Accept Incoming (main)
-<<<<<<< feat/initial-expo-migration
-your current branch code
-=======
-incoming branch code
->>>>>>> main
-```
-
-### Global Controls
-At the top of the file, you'll see:
-- **Accept All Current**: Resolves all conflicts by keeping your current branch changes
-- **Accept All Incoming**: Resolves all conflicts by accepting the incoming branch changes
-- **Status Indicator**: Shows how many conflicts remain
+1. **Navigate to a GitHub merge conflict page**
+2. **Click one of the resolution buttons:**
+   - `Accept All Current` - Keep changes from your current branch
+   - `Accept All Incoming` - Accept changes from the incoming branch  
+   - `Keep Both` - Preserve both sets of changes
+3. **Content is automatically copied to clipboard**
+4. **Paste (Ctrl+V) into GitHub's editor**
+5. **Click GitHub's "Mark as resolved" button**
 
 ## Installation
 
-1. **Download the Extension Files**
-   - Save all the provided files in a folder (manifest.json, content.js, styles.css, popup.html)
+### Method 1: Download Release (Recommended)
 
-2. **Load the Extension in Chrome**
-   - Open Chrome and go to `chrome://extensions/`
-   - Enable "Developer mode" in the top right corner
-   - Click "Load unpacked" and select your extension folder
-   - The extension should now appear in your Chrome toolbar
+1. **Download the latest release** from the [Releases page](https://github.com/anasyd/GithubAssist/releases)
+2. **Extract the ZIP file** to a folder on your computer
+3. **Skip to "Load Extension" section below**
 
-3. **Add Icons (Optional)**
-   - Create icon files named `icon16.png`, `icon48.png`, and `icon128.png`
-   - Place them in the same folder as your other extension files
-   - The extension will work without icons, but they make it look more professional
+### Method 2: Clone Repository
+
+```bash
+git clone https://github.com/anasyd/GithubAssist.git
+cd GithubAssist
+```
+
+### Load Extension in Chrome
+
+1. **Open Chrome** and navigate to `chrome://extensions/`
+2. **Enable "Developer mode"** (toggle in top-right corner)
+3. **Click "Load unpacked"**
+4. **Select the folder** containing the extension files
+5. **The extension will appear** in your extensions list
+
+### Verify Installation
+
+- Look for the extension icon in your Chrome toolbar
+- Visit a GitHub repository with merge conflicts to test
+- The helper buttons should appear on conflict resolution pages
 
 ## Usage
 
-1. Navigate to any GitHub repository with merge conflicts
-2. Open a file that contains conflict markers (`<<<<<<<`, `=======`, `>>>>>>>`)
-3. The extension will automatically add resolution buttons
-4. Click the appropriate button to resolve conflicts:
-   - **Accept Current**: Keep the code from your current branch
-   - **Accept Incoming**: Accept the code from the branch being merged
-   - **Accept All Current/Incoming**: Resolve all conflicts in the file at once
+### Basic Workflow
 
-## File Structure
+1. **Open a pull request** with merge conflicts on GitHub
+2. **Click "Resolve conflicts"** to enter GitHub's conflict editor
+3. **Extension buttons appear** above the editor showing branch names
+4. **Choose your resolution strategy:**
+   - **Accept All Current** (`your-branch-name`) - Keep your changes
+   - **Accept All Incoming** (`main`) - Accept incoming changes
+   - **Keep Both** - Preserve both versions
+5. **Content is auto-copied** - just paste with `Ctrl+V`
+6. **Complete the resolution** by clicking GitHub's "Mark as resolved"
 
-```
-github-merge-helper/
-├── manifest.json          # Extension configuration
-├── content.js            # Main functionality
-├── styles.css            # Extension styling
-├── popup.html            # Extension popup interface
-├── README.md             # This file
-└── icons/                # Extension icons (optional)
-    ├── icon16.png
-    ├── icon48.png
-    └── icon128.png
-```
+### Button Guide
 
-## Technical Details
+| Button | Action | When to Use |
+|--------|--------|-------------|
+| `Accept All Current` | Keep your branch's changes | Your code is correct/preferred |
+| `Accept All Incoming` | Accept the other branch's changes | Their code is better/newer |
+| `Keep Both` | Preserve both sets of changes | Both changes are needed |
+| `Show Resolved` | Display the resolved content | Review before pasting |
 
-- **Manifest Version**: 3 (latest Chrome extension standard)
-- **Permissions**: Only requires `activeTab` permission
-- **Compatibility**: Works with GitHub's modern interface
-- **Framework**: Vanilla JavaScript (no dependencies)
+### Visual Indicators
 
-## Supported GitHub Features
-
-- ✅ File editor conflicts (editable text areas)
-- ✅ Read-only conflict view
-- ✅ Pull request conflict resolution
-- ✅ Direct file editing conflicts
-- ✅ GitHub's PJAX navigation
-
-## Browser Compatibility
-
-- Chrome (Recommended)
-- Edge (Chromium-based)
-- Other Chromium-based browsers
+- **Green button**: Accept current branch changes
+- **Blue button**: Accept incoming branch changes  
+- **Purple button**: Keep both sets of changes
+- **Yellow button**: Show resolved content for review
+- **Branch names** appear below buttons for clarity
 
 ## Troubleshooting
 
-**Extension not working?**
-- Make sure you're on a GitHub page with actual merge conflicts
-- Refresh the page after installing the extension
-- Check that the extension is enabled in Chrome settings
+### Extension Not Appearing
 
-**Buttons not appearing?**
-- Wait for the page to fully load (the extension waits 1 second)
-- Try refreshing the page
-- Ensure the file actually contains conflict markers
+- **Check you're on a conflict page**: Extension only activates on GitHub conflict resolution pages
+- **Refresh the page**: Try reloading the GitHub page
+- **Check extension is enabled**: Visit `chrome://extensions/` and ensure it's enabled
+- **Look for errors**: Open Developer Tools (F12) and check for error messages
 
-**Changes not saving?**
-- The extension modifies the text area content and triggers change events
-- Make sure to commit your changes through GitHub's interface after resolving
+### Copy/Paste Issues
+
+- **Manual copy option**: Use the "Show Resolved" button if auto-copy fails
+- **Browser permissions**: Some browsers may block clipboard access
+- **Alternative method**: Select and copy the resolved content manually
+
+### Content Not Updating
+
+- **Use copy-paste workflow**: The extension doesn't directly modify GitHub's editor
+- **Follow the steps**: Copy resolved content → Select all in editor → Paste
+- **GitHub's "Mark as resolved"**: Always click this after pasting
+
+### Branch Names Not Showing
+
+- **Generic names displayed**: Shows "current" and "incoming" if detection fails
+- **Still functional**: Extension works even without specific branch names
+- **Check conflict markers**: Branch names are extracted from `<<<<<<< branch-name`
+
+## Browser Compatibility
+
+- ✅ **Chrome** (Recommended)
+- ✅ **Microsoft Edge** (Chromium-based)
+- ✅ **Brave Browser**
+- ✅ **Other Chromium browsers**
+- ❌ **Firefox** (Not compatible - uses different extension format)
+- ❌ **Safari** (Not compatible)
+
+## Privacy & Security
+
+- 🔒 **No data collection** - Extension operates entirely locally
+- 🚫 **No external requests** - Only reads from GitHub pages you visit
+- 🏠 **Local processing** - All conflict resolution happens in your browser
+- 🔐 **No permissions abuse** - Only requests necessary `activeTab` access
+- 📝 **Open source** - All code is available for review
+
+## Technical Details
+
+### File Structure
+```
+GithubAssist/
+├── icons
+│   ├── icon.png
+│   ├── icon.svg
+│   ├── icon128.png
+│   ├── icon16.png
+│   └── icon48.png
+├── images
+│   ├── icon.png
+│   └── Screenshot.png
+├── content.js
+├── LICENSE
+├── manifest.json
+├── popup.html
+├── popup.js
+├── README.md
+└── styles.css
+```
+
+### Permissions Explained
+
+- **`activeTab`**: Required to read conflict content from GitHub pages
+- **`storage`**: Used for extension settings (currently minimal usage)
+
+### GitHub Integration
+
+- **Read-only approach**: Extension only reads conflict content, never writes
+- **Safe operation**: Doesn't interfere with GitHub's CodeMirror editor
+- **Copy-paste workflow**: Reliable method that works with GitHub's security policies
 
 ## Contributing
 
-This extension can be enhanced with additional features:
-- Support for more complex conflict scenarios
-- Integration with GitHub CLI
-- Keyboard shortcuts
-- Conflict history tracking
-- Custom conflict resolution rules
+Found a bug or want to contribute? 
+
+1. **Fork the repository**
+2. **Create a feature branch**: `git checkout -b feature-name`
+3. **Make your changes** and test thoroughly
+4. **Submit a pull request** with a clear description
+
+### Development Setup
+
+1. **Clone the repository**
+```bash
+git clone https://github.com/anasyd/GithubAssist.git
+cd GithubAssist
+```
+2. **Make changes** to the source files
+3. **Test locally** by loading the unpacked extension
+4. **Verify functionality** on actual GitHub conflict pages
 
 ## License
 
-This project is open source and available under the MIT License.
+This project is open source and available under the [MIT License](LICENSE).
+
+## Support
+
+- 🐛 **Report bugs**: [Open an issue](https://github.com/anasyd/GithubAssist/issues)
+- 💡 **Feature requests**: [Start a discussion](https://github.com/anasyd/GithubAssist/discussions)
+- 📧 **Contact**: Create an issue for support questions
+
+## Changelog
+
+### v1.0.0
+- Initial release
+- One-click conflict resolution
+- Automatic clipboard copying
+- Branch name detection
+- Safe copy-paste workflow
+
+---
+
+**Made with ❤️ for developers who hate tedious merge conflicts**
+
+> **Note**: This extension is not affiliated with GitHub. It's a community tool to improve the conflict resolution experience.

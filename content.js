@@ -227,14 +227,13 @@ class MergeConflictHelper {
     buttonContainer.className = "merge-helper-buttons";
     buttonContainer.style.cssText = `
             padding: 12px 16px;
-            background: #fff3cd;
-            border: 1px solid #ffeaa7;
+            background: #1e1e1e;
+            border: 1px solid #333;
             border-radius: 6px;
             margin: 12px 0;
             display: flex;
-            gap: 8px;
-            align-items: center;
-            flex-wrap: wrap;
+            flex-direction: column;
+            gap: 12px;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         `;
 
@@ -242,40 +241,50 @@ class MergeConflictHelper {
     const incomingDisplay = this.formatBranchName(this.incomingBranch);
 
     buttonContainer.innerHTML = `
-            <div style="font-weight: 600; color: #856404; margin-right: 12px;">
-                🔧 Conflict Helper (Safe Mode)
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="font-weight: 600; color: #58a6ff;">
+                    🔧 Conflict Helper
+                </div>
+                <span class="merge-helper-status" style="
+                    color: #f0883e; font-weight: 500;
+                ">Ready to resolve conflicts</span>
             </div>
-            <button class="btn btn-sm merge-helper-current" style="
-                background: #28a745; color: white; border: none; 
-                padding: 6px 12px; border-radius: 6px; font-weight: 500; cursor: pointer;
-                position: relative;
-            ">
-                Accept All Current
-                <div style="
-                    font-size: 10px; opacity: 0.8; font-weight: normal; margin-top: 2px;
-                ">${currentDisplay}</div>
-            </button>
-            <button class="btn btn-sm merge-helper-incoming" style="
-                background: #0366d6; color: white; border: none; 
-                padding: 6px 12px; border-radius: 6px; font-weight: 500; cursor: pointer;
-                position: relative;
-            ">
-                Accept All Incoming
-                <div style="
-                    font-size: 10px; opacity: 0.8; font-weight: normal; margin-top: 2px;
-                ">${incomingDisplay}</div>
-            </button>
-            <button class="btn btn-sm merge-helper-both" style="
-                background: #6f42c1; color: white; border: none; 
-                padding: 6px 12px; border-radius: 6px; font-weight: 500; cursor: pointer;
-            ">Keep Both</button>
-            <button class="btn btn-sm merge-helper-show" style="
-                background: #ffc107; color: #212529; border: none; 
-                padding: 6px 12px; border-radius: 6px; font-weight: 500; cursor: pointer;
-            ">Show Resolved</button>
-            <span class="merge-helper-status" style="
-                margin-left: 12px; color: #856404; font-weight: 500;
-            ">Ready to resolve conflicts</span>
+            <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                <button class="btn btn-sm merge-helper-current" style="
+                    background: #238636; color: white; border: none; 
+                    padding: 4px 8px; border-radius: 4px; font-weight: 500; cursor: pointer;
+                    position: relative; height: 50px; display: flex; flex-direction: column; justify-content: center;
+                    font-size: 12px;
+                ">
+                    <div>Accept All Current</div>
+                    <div style="
+                        font-size: 9px; opacity: 0.8; font-weight: normal; margin-top: 1px;
+                    ">${currentDisplay}</div>
+                </button>
+                <button class="btn btn-sm merge-helper-incoming" style="
+                    background: #1f6feb; color: white; border: none; 
+                    padding: 4px 8px; border-radius: 4px; font-weight: 500; cursor: pointer;
+                    position: relative; height: 50px; display: flex; flex-direction: column; justify-content: center;
+                    font-size: 12px;
+                ">
+                    <div>Accept All Incoming</div>
+                    <div style="
+                        font-size: 9px; opacity: 0.8; font-weight: normal; margin-top: 1px;
+                    ">${incomingDisplay}</div>
+                </button>
+                <button class="btn btn-sm merge-helper-both" style="
+                    background: #8957e5; color: white; border: none; 
+                    padding: 4px 8px; border-radius: 4px; font-weight: 500; cursor: pointer;
+                    height: 50px; display: flex; align-items: center; justify-content: center;
+                    font-size: 12px;
+                ">Keep Both</button>
+                <button class="btn btn-sm merge-helper-show" style="
+                    background: #f0883e; color: white; border: none; 
+                    padding: 4px 8px; border-radius: 4px; font-weight: 500; cursor: pointer;
+                    height: 50px; display: flex; align-items: center; justify-content: center;
+                    font-size: 12px;
+                ">Show Resolved</button>
+            </div>
         `;
 
     insertionPoint.insertAdjacentElement(
@@ -382,12 +391,12 @@ class MergeConflictHelper {
       successMessage = document.createElement("div");
       successMessage.className = "merge-helper-copy-success";
       successMessage.style.cssText = `
-                background: #d1ecf1;
-                border: 1px solid #bee5eb;
+                background: #1e1e1e;
+                border: 1px solid #333;
                 border-radius: 6px;
                 padding: 12px 16px;
                 margin: 12px 0;
-                color: #0c5460;
+                color: #58a6ff;
                 font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
                 display: flex;
                 align-items: center;
@@ -404,8 +413,8 @@ class MergeConflictHelper {
     successMessage.innerHTML = `
             <span style="font-size: 18px;">📋</span>
             <div>
-                <strong>Content copied to clipboard!</strong><br>
-                <span style="font-size: 14px;">
+                <strong style="color: #238636;">Content copied to clipboard!</strong><br>
+                <span style="font-size: 14px; color: #c9d1d9;">
                     1. Click in the GitHub editor<br>
                     2. Select all (Ctrl+A)<br>
                     3. Paste (Ctrl+V)<br>
@@ -438,8 +447,8 @@ class MergeConflictHelper {
       displayArea = document.createElement("div");
       displayArea.className = "merge-helper-display";
       displayArea.style.cssText = `
-                background: #d4edda;
-                border: 1px solid #c3e6cb;
+                background: #1e1e1e;
+                border: 1px solid #333;
                 border-radius: 6px;
                 padding: 16px;
                 margin: 12px 0;
@@ -448,6 +457,7 @@ class MergeConflictHelper {
                 max-height: 400px;
                 overflow-y: auto;
                 position: relative;
+                color: #c9d1d9;
             `;
 
       // Insert after our buttons or success message
@@ -461,10 +471,10 @@ class MergeConflictHelper {
 
     displayArea.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                <strong style="color: #155724;">Resolved Content:</strong>
+                <strong style="color: #238636;">Resolved Content:</strong>
                 <div style="display: flex; gap: 8px;">
                     <button id="copy-resolved" style="
-                        background: #28a745; color: white; border: none; 
+                        background: #238636; color: white; border: none; 
                         padding: 4px 8px; border-radius: 4px; cursor: pointer;
                     ">Copy Again</button>
                     <button id="hide-resolved" style="
@@ -474,13 +484,13 @@ class MergeConflictHelper {
                 </div>
             </div>
             <div style="
-                background: #f8f9fa; 
-                border: 1px solid #c3e6cb; 
+                background: #161b22; 
+                border: 1px solid #333; 
                 border-radius: 4px; 
                 padding: 12px; 
                 font-size: 14px;
                 line-height: 1.4;
-                color: #212529;
+                color: #c9d1d9;
                 font-family: 'SFMono-Regular', 'Consolas', 'Liberation Mono', 'Menlo', monospace;
             ">${this.escapeHtml(this.resolvedContent)}</div>
         `;
@@ -632,10 +642,10 @@ class MergeConflictHelper {
         status.textContent = `${conflictCount} conflict${
           conflictCount === 1 ? "" : "s"
         } detected`;
-        status.style.color = "#856404";
+        status.style.color = "#f0883e";
       } else {
         status.textContent = "No conflicts detected";
-        status.style.color = "#155724";
+        status.style.color = "#238636";
       }
     }
   }
@@ -647,16 +657,16 @@ class MergeConflictHelper {
 
       switch (type) {
         case "success":
-          status.style.color = "#155724";
+          status.style.color = "#238636";
           break;
         case "warning":
-          status.style.color = "#856404";
+          status.style.color = "#f0883e";
           break;
         case "error":
-          status.style.color = "#721c24";
+          status.style.color = "#da3633";
           break;
         default:
-          status.style.color = "#856404";
+          status.style.color = "#f0883e";
       }
     }
   }

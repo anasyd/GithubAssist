@@ -84,8 +84,124 @@ class MergeConflictHelper {
 
   setupHelper() {
     this.debug("Setting up helper...");
+    this.detectBranches();
     this.addButtons();
     this.updateConflictStatus();
+  }
+
+  detectBranches() {
+    this.debug("Detecting branch information...");
+
+    // Method 1: Try to extract from conflict markers in content
+    const content = this.getContent();
+    const lines = content.split("\n");
+
+    let currentBranch = "current";
+    let incomingBranch = "incoming";
+
+    for (const line of lines) {
+      // Look for conflict start marker: <<<<<<< branch-name
+      const startMatch = line.match(/^<<<<<<< (.+)$/);
+      if (startMatch) {
+        currentBranch = startMatch[1].trim();
+        this.debug("Found current branch from conflict marker:", currentBranch);
+      }
+
+      // Look for conflict end marker: >>>>>>> branch-name
+      const endMatch = line.match(/^>>>>>>> (.+)$/);
+      if (endMatch) {
+        incomingBranch = endMatch[1].trim();
+        this.debug(
+          "Found incoming branch from conflict marker:",
+          incomingBranch
+        );
+      }
+    }
+
+    // Method 2: Try to extract from page elements
+    if (currentBranch === "current" || incomingBranch === "incoming") {
+      this.detectBranchesFromPage();
+    }
+
+    // Method 3: Try to extract from URL
+    if (currentBranch === "current" || incomingBranch === "incoming") {
+      this.detectBranchesFromURL();
+    }
+
+    this.currentBranch = currentBranch;
+    this.incomingBranch = incomingBranch;
+
+    this.debug("Branch detection result:", {
+      current: this.currentBranch,
+      incoming: this.incomingBranch,
+    });
+  }
+
+  detectBranchesFromPage() {
+    // Try to find branch names in the page DOM
+    const selectors = [
+      ".branch-name",
+      ".js-branch-name",
+      "[data-branch]",
+      ".head-ref",
+      ".base-ref",
+    ];
+
+    for (const selector of selectors) {
+      const elements = document.querySelectorAll(selector);
+      if (elements.length >= 2) {
+        this.currentBranch = elements[0].textContent?.trim() || "current";
+        this.incomingBranch = elements[1].textContent?.trim() || "incoming";
+        this.debug(
+          "Found branches from page elements:",
+          this.currentBranch,
+          this.incomingBranch
+        );
+        return;
+      }
+    }
+
+    // Try to find in page text
+    const pageText = document.body.textContent;
+    const branchMatch = pageText.match(/merge\s+([^\s]+)\s+into\s+([^\s]+)/i);
+    if (branchMatch) {
+      this.incomingBranch = branchMatch[1];
+      this.currentBranch = branchMatch[2];
+      this.debug(
+        "Found branches from page text:",
+        this.currentBranch,
+        this.incomingBranch
+      );
+    }
+  }
+
+  detectBranchesFromURL() {
+    // Extract from URL if possible
+    const url = window.location.href;
+    const match = url.match(/\/pull\/\d+/);
+    if (match) {
+      // This is a PR conflict page, try to find branch info in the page title or meta
+      const title = document.title;
+      const titleMatch = title.match(/(.+)\s+by\s+(.+)/);
+      if (titleMatch) {
+        this.debug("Found potential branch info in title");
+      }
+    }
+  }
+
+  formatBranchName(branchName) {
+    // Clean up branch name for display
+    if (!branchName || branchName === "current" || branchName === "incoming") {
+      return branchName;
+    }
+
+    // Remove common prefixes
+    const cleaned = branchName
+      .replace(/^(origin\/|refs\/heads\/|refs\/remotes\/)/, "")
+      .replace(/^HEAD$/, "current");
+
+    // Truncate if too long
+    return cleaned.length > 20 ? cleaned.substring(0, 17) + "..." : cleaned;
   }
 
   addButtons() {
@@ -122,6 +238,9 @@ class MergeConflictHelper {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         `;
 
+    const currentDisplay = this.formatBranchName(this.currentBranch);
+    const incomingDisplay = this.formatBranchName(this.incomingBranch);
+
     buttonContainer.innerHTML = `
             <div style="font-weight: 600; color: #856404; margin-right: 12px;">
                 🔧 Conflict Helper (Safe Mode)
@@ -129,11 +248,23 @@ class MergeConflictHelper {
             <button class="btn btn-sm merge-helper-current" style="
                 background: #28a745; color: white; border: none; 
                 padding: 6px 12px; border-radius: 6px; font-weight: 500; cursor: pointer;
-            ">Accept All Current</button>
+                position: relative;
+            ">
+                Accept All Current
+                <div style="
+                    font-size: 10px; opacity: 0.8; font-weight: normal; margin-top: 2px;
+                ">${currentDisplay}</div>
+            </button>
             <button class="btn btn-sm merge-helper-incoming" style="
                 background: #0366d6; color: white; border: none; 
                 padding: 6px 12px; border-radius: 6px; font-weight: 500; cursor: pointer;
-            ">Accept All Incoming</button>
+                position: relative;
+            ">
+                Accept All Incoming
+                <div style="
+                    font-size: 10px; opacity: 0.8; font-weight: normal; margin-top: 2px;
+                ">${incomingDisplay}</div>
+            </button>
             <button class="btn btn-sm merge-helper-both" style="
                 background: #6f42c1; color: white; border: none; 
                 padding: 6px 12px; border-radius: 6px; font-weight: 500; cursor: pointer;
@@ -188,21 +319,115 @@ class MergeConflictHelper {
 
     const resolvedContent = this.processConflicts(content, choice);
 
-    // Store resolved content for showing to user
+    // Store resolved content
     this.resolvedContent = resolvedContent;
 
-    // Show the resolved content instead of trying to update the editor
-    this.showResolvedContent();
+    // Automatically copy to clipboard
+    this.copyToClipboard(resolvedContent, choice);
+  }
 
-    this.updateStatus(
-      `✅ Conflicts resolved (${choice}) - Copy the text below`,
-      "success"
-    );
+  async copyToClipboard(content, choice) {
+    try {
+      await navigator.clipboard.writeText(content);
+      this.updateStatus(
+        `✅ Resolved (${choice}) & copied! Just paste (Ctrl+V) in the editor`,
+        "success"
+      );
+      this.showCopySuccess(choice);
+    } catch (error) {
+      this.debug("Clipboard API failed, trying fallback:", error);
+      this.fallbackCopy(content, choice);
+    }
+  }
+
+  fallbackCopy(content, choice) {
+    // Fallback copy method for browsers that don't support clipboard API
+    const textArea = document.createElement("textarea");
+    textArea.value = content;
+    textArea.style.position = "fixed";
+    textArea.style.left = "-9999px";
+    textArea.style.top = "-9999px";
+    document.body.appendChild(textArea);
+    textArea.select();
+    textArea.setSelectionRange(0, 99999); // For mobile devices
+
+    try {
+      const successful = document.execCommand("copy");
+      if (successful) {
+        this.updateStatus(
+          `✅ Resolved (${choice}) & copied! Just paste (Ctrl+V) in the editor`,
+          "success"
+        );
+        this.showCopySuccess(choice);
+      } else {
+        throw new Error("execCommand failed");
+      }
+    } catch (err) {
+      this.debug("Fallback copy failed:", err);
+      this.updateStatus(
+        `✅ Resolved (${choice}) but copy failed - use "Show Resolved" button`,
+        "warning"
+      );
+      this.resolvedContent = content; // Store for manual copy
+    }
+
+    document.body.removeChild(textArea);
+  }
+
+  showCopySuccess(choice) {
+    // Show a temporary visual confirmation
+    let successMessage = document.querySelector(".merge-helper-copy-success");
+
+    if (!successMessage) {
+      successMessage = document.createElement("div");
+      successMessage.className = "merge-helper-copy-success";
+      successMessage.style.cssText = `
+                background: #d1ecf1;
+                border: 1px solid #bee5eb;
+                border-radius: 6px;
+                padding: 12px 16px;
+                margin: 12px 0;
+                color: #0c5460;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            `;
+
+      // Insert after our buttons
+      const buttons = document.querySelector(".merge-helper-buttons");
+      if (buttons) {
+        buttons.insertAdjacentElement("afterend", successMessage);
+      }
+    }
+
+    successMessage.innerHTML = `
+            <span style="font-size: 18px;">📋</span>
+            <div>
+                <strong>Content copied to clipboard!</strong><br>
+                <span style="font-size: 14px;">
+                    1. Click in the GitHub editor<br>
+                    2. Select all (Ctrl+A)<br>
+                    3. Paste (Ctrl+V)<br>
+                    4. Click "Mark as resolved"
+                </span>
+            </div>
+        `;
+
+    // Auto-hide the message after 10 seconds
+    setTimeout(() => {
+      if (successMessage.parentElement) {
+        successMessage.remove();
+      }
+    }, 10000);
   }
 
   showResolvedContent() {
     if (!this.resolvedContent) {
-      this.updateStatus("No resolved content available", "warning");
+      this.updateStatus(
+        "No resolved content available - click an Accept button first",
+        "warning"
+      );
       return;
     }
 
@@ -225,20 +450,28 @@ class MergeConflictHelper {
                 position: relative;
             `;
 
-      // Insert after our buttons
+      // Insert after our buttons or success message
       const buttons = document.querySelector(".merge-helper-buttons");
-      if (buttons) {
-        buttons.insertAdjacentElement("afterend", displayArea);
+      const successMsg = document.querySelector(".merge-helper-copy-success");
+      const insertAfter = successMsg || buttons;
+      if (insertAfter) {
+        insertAfter.insertAdjacentElement("afterend", displayArea);
       }
     }
 
     displayArea.innerHTML = `
-            <div style="display: flex; justify-content: between; align-items: center; margin-bottom: 12px;">
-                <strong style="color: #155724;">Resolved Content (Copy this text):</strong>
-                <button id="copy-resolved" style="
-                    background: #28a745; color: white; border: none; 
-                    padding: 4px 8px; border-radius: 4px; cursor: pointer; margin-left: auto;
-                ">Copy to Clipboard</button>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <strong style="color: #155724;">Resolved Content:</strong>
+                <div style="display: flex; gap: 8px;">
+                    <button id="copy-resolved" style="
+                        background: #28a745; color: white; border: none; 
+                        padding: 4px 8px; border-radius: 4px; cursor: pointer;
+                    ">Copy Again</button>
+                    <button id="hide-resolved" style="
+                        background: #6c757d; color: white; border: none; 
+                        padding: 4px 8px; border-radius: 4px; cursor: pointer;
+                    ">Hide</button>
+                </div>
             </div>
             <div style="
                 background: #f8f9fa; 
@@ -250,34 +483,21 @@ class MergeConflictHelper {
                 color: #212529;
                 font-family: 'SFMono-Regular', 'Consolas', 'Liberation Mono', 'Menlo', monospace;
             ">${this.escapeHtml(this.resolvedContent)}</div>
-            <div style="margin-top: 12px; color: #155724; font-size: 12px;">
-                <strong>Instructions:</strong><br>
-                1. Copy the resolved content above<br>
-                2. Manually select all text in the GitHub editor (Ctrl+A)<br>
-                3. Paste the resolved content (Ctrl+V)<br>
-                4. Click "Mark as resolved" button
-            </div>
         `;
 
     // Add copy functionality
     const copyBtn = displayArea.querySelector("#copy-resolved");
+    const hideBtn = displayArea.querySelector("#hide-resolved");
+
     if (copyBtn) {
       copyBtn.addEventListener("click", () => {
-        navigator.clipboard
-          .writeText(this.resolvedContent)
-          .then(() => {
-            copyBtn.textContent = "Copied!";
-            copyBtn.style.background = "#20c997";
-            setTimeout(() => {
-              copyBtn.textContent = "Copy to Clipboard";
-              copyBtn.style.background = "#28a745";
-            }, 2000);
-          })
-          .catch((err) => {
-            this.debug("Copy failed:", err);
-            // Fallback: create a text selection
-            this.fallbackCopy();
-          });
+        this.copyToClipboard(this.resolvedContent, "manual");
+      });
+    }
+
+    if (hideBtn) {
+      hideBtn.addEventListener("click", () => {
+        displayArea.remove();
       });
     }
   }

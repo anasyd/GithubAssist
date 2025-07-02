@@ -1,9 +1,10 @@
 {
   "manifest_version": 3,
   "name": "GitHub Merge Conflict Helper",
-  "version": "1.0.0",
-  "description": "Simplify GitHub merge conflict resolution with one-click buttons",
-  "permissions": ["activeTab"],
+  "version": "2.0.0",
+  "description": "Simplify GitHub merge conflict resolution with one-click buttons and API integration",
+  "permissions": ["activeTab", "storage"],
+  "host_permissions": ["https://github.com/*", "https://api.github.com/*"],
   "content_scripts": [
     {
       "matches": ["https://github.com/*"],
@@ -11,7 +12,6 @@
       "css": ["styles.css"]
     }
   ],
-
   "action": {
     "default_popup": "popup.html",
     "default_title": "GitHub Merge Conflict Helper"
